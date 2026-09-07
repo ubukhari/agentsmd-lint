@@ -1,0 +1,2 @@
+Always run `yarn test` before committing.
+Keep components in `src/components/`.

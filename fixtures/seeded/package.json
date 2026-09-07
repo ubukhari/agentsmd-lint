@@ -1,0 +1,17 @@
+{
+  "name": "seeded-app",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "test": "vitest run",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "vitest": "^4.0.0",
+    "eslint": "^10.0.0"
+  }
+}

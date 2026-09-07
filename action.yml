@@ -1,0 +1,96 @@
+name: "agentsmd-lint"
+description: "Lint AGENTS.md / CLAUDE.md / .cursorrules against the repo and post the agent-readiness score on the PR. No LLM, no telemetry."
+author: "agentwares"
+branding:
+  icon: "check-square"
+  color: "green"
+
+inputs:
+  path:
+    description: "Repository root to lint"
+    required: false
+    default: "."
+  min-score:
+    description: "Fail the job when the score is below this number (0–100)"
+    required: false
+    default: "0"
+  fail-on-error:
+    description: "Fail the job when any error-severity finding exists"
+    required: false
+    default: "false"
+  comment:
+    description: "Post/update a sticky PR comment with the report (pull_request events only)"
+    required: false
+    default: "true"
+  github-token:
+    description: "Token used to post the comment (needs pull-requests: write)"
+    required: false
+    default: ${{ github.token }}
+  version:
+    description: "agentsmd-lint version to run via npx"
+    required: false
+    default: "latest"
+
+outputs:
+  score:
+    description: "Agent-readiness score 0–100"
+    value: ${{ steps.lint.outputs.score }}
+  grade:
+    description: "Letter grade A–F"
+    value: ${{ steps.lint.outputs.grade }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Lint instruction files
+      id: lint
+      shell: bash
+      env:
+        LINT_PATH: ${{ inputs.path }}
+        LINT_VERSION: ${{ inputs.version }}
+      run: |
+        set -uo pipefail
+        npx -y "@agentwares/agentsmd-lint@${LINT_VERSION}" "$LINT_PATH" --format json --no-fail > "$RUNNER_TEMP/agentsmd-lint.json"
+        npx -y "@agentwares/agentsmd-lint@${LINT_VERSION}" "$LINT_PATH" --format markdown --no-fail > "$RUNNER_TEMP/agentsmd-lint.md"
+        npx -y "@agentwares/agentsmd-lint@${LINT_VERSION}" "$LINT_PATH" --format github --no-fail
+        node -e '
+          const r = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+          const out = process.env.GITHUB_OUTPUT;
+          require("fs").appendFileSync(out, `score=${r.score.value}\ngrade=${r.score.grade}\nerrors=${r.summary.errors}\n`);
+        ' "$RUNNER_TEMP/agentsmd-lint.json"
+        cat "$RUNNER_TEMP/agentsmd-lint.md" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Comment on the pull request
+      if: ${{ inputs.comment == 'true' && github.event_name == 'pull_request' }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        REPO: ${{ github.repository }}
+      run: |
+        set -euo pipefail
+        BODY_FILE="$RUNNER_TEMP/agentsmd-lint.md"
+        EXISTING=$(gh api "repos/$REPO/issues/$PR_NUMBER/comments?per_page=100" \
+          --jq '[.[] | select(.body | contains("<!-- agentsmd-lint -->"))][0].id // empty')
+        if [ -n "$EXISTING" ]; then
+          gh api -X PATCH "repos/$REPO/issues/comments/$EXISTING" -F body=@"$BODY_FILE" > /dev/null
+          echo "updated comment $EXISTING"
+        else
+          gh api -X POST "repos/$REPO/issues/$PR_NUMBER/comments" -F body=@"$BODY_FILE" > /dev/null
+          echo "created comment"
+        fi
+
+    - name: Enforce thresholds
+      shell: bash
+      env:
+        SCORE: ${{ steps.lint.outputs.score }}
+        ERRORS: ${{ steps.lint.outputs.errors }}
+        MIN_SCORE: ${{ inputs.min-score }}
+        FAIL_ON_ERROR: ${{ inputs.fail-on-error }}
+      run: |
+        if [ "${SCORE:-0}" -lt "${MIN_SCORE:-0}" ]; then
+          echo "::error::agent-readiness score $SCORE is below the minimum $MIN_SCORE"; exit 1
+        fi
+        if [ "$FAIL_ON_ERROR" = "true" ] && [ "${ERRORS:-0}" -gt 0 ]; then
+          echo "::error::agentsmd-lint found $ERRORS error(s)"; exit 1
+        fi

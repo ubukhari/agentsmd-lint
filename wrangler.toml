@@ -1,0 +1,11 @@
+# Cloudflare Worker for the GitHub App webhook (optional; the same handler also
+# runs as a Vercel Function). Secrets: wrangler secret put GITHUB_APP_ID /
+# GITHUB_APP_PRIVATE_KEY / GITHUB_WEBHOOK_SECRET. No Cloudflare account exists
+# yet (docs/HOSTING.md) — kept here so `wrangler dev` works locally.
+name = "agentsmd-lint-app"
+main = "src/github/worker.ts"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+[vars]
+BADGE_URL_BASE = "https://agentwares-readiness.vercel.app"
