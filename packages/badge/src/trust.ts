@@ -78,7 +78,18 @@ function numberOrNull(v: number | null | undefined): number | null {
 /** Build the trust.json document for a target. */
 export function buildTrustJson(data: StatusPageData, opts: BuildTrustOptions = {}): TrustJson {
   const now = resolveNow(opts.now ?? data.generatedAt);
-  const status = latestStatus(data.checks, now);
+  const openIncidents = data.incidents.filter(
+    (i) => i.closedAt === null || i.closedAt === undefined,
+  ).length;
+  // An open incident is an unresolved failure, so "passing" is not true while one is open.
+  //
+  // `latestStatus` reads only check results, which means a target could report `status:
+  // "passing"` and `incidents_open: 1` in the same document — and did. An agent reading
+  // trust.json to decide whether to depend on a service got a contradiction and no way to
+  // resolve it. Failing still wins over degraded: a check failing right now is the worse
+  // news, and saying so is the point.
+  const fromChecks = latestStatus(data.checks, now);
+  const status = fromChecks === "passing" && openIncidents > 0 ? "degraded" : fromChecks;
   const up = uptimeSummary(data.checks, now);
   const last = lastCheckAt(data.checks);
   const nightly = latestNightly(data.nightly);
@@ -105,8 +116,7 @@ export function buildTrustJson(data: StatusPageData, opts: BuildTrustOptions = {
       : null,
     adversarial_pass_rate: adversarial ?? null,
     models_seen: modelsSeen(data.nightly),
-    incidents_open: data.incidents.filter((i) => i.closedAt === null || i.closedAt === undefined)
-      .length,
+    incidents_open: openIncidents,
     updated_at: toIso(now),
     badge_url: data.badgeUrl,
     status_url: data.publicUrl,

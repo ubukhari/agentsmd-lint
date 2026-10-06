@@ -117,5 +117,7 @@ export interface RunPageData {
   sourceFormat?: RunSourceFormat;
   /** display name of the target; falls back to `owner/slug` */
   name?: string;
+  /** banner rendered above the numbers — e.g. to mark a page as illustrative sample data */
+  notice?: string;
   brand?: Brand;
 }

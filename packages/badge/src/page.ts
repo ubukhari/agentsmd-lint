@@ -103,6 +103,7 @@ th{color:var(--muted);font-weight:600;white-space:nowrap}
 pre{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px;overflow-x:auto;font-size:.85rem;line-height:1.5;margin:0}
 code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 .empty{color:var(--muted);font-style:italic}
+.notice{background:var(--card);border:1px solid var(--warn);border-left-width:4px;border-radius:8px;padding:12px 14px;margin:0 0 20px;font-size:.9rem}
 dl.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:0}
 dl.summary div{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
 dl.summary dt{color:var(--muted);font-size:.85rem}
@@ -462,6 +463,7 @@ export function renderRunPage(data: RunPageData, opts: RenderPageOptions = {}): 
   return (
     documentOpen(title, description, favicon(status) + "\n") +
     runHeader(data, ranAt, status) +
+    (data.notice ? `<p class="notice">${escapeHtml(data.notice)}</p>\n` : "") +
     runSummary(data, counts) +
     diffTable(diffs) +
     driftSection(data) +

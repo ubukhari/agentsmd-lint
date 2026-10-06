@@ -194,6 +194,8 @@ export function demoRunPageData(opts: DemoOptions = {}): RunPageData {
     runId: "run_demo_1",
     ranAt: new Date(ranAt).toISOString(),
     name: "Acme support agent",
+    notice:
+      "Sample data. This page shows the layout of a nightly run for a fictional agent — the checks, diffs, drift scores and costs below are invented, not measured. Real runs appear at /<owner>/<slug>/runs/<id>.",
     summary: { checks: 12, "pass rate": "91.7%", "adversarial pass": "92.3%", "cost (USD)": 0.31 },
     diffs: [
       { check: "refund policy question", before: "pass", after: "pass", verdict: "unchanged" },

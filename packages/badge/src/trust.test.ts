@@ -150,3 +150,56 @@ describe("trustHeaders", () => {
     });
   });
 });
+
+describe("status and incidents cannot contradict each other", () => {
+  const base = {
+    owner: "acme",
+    slug: "api",
+    name: "API",
+    kind: "http" as const,
+    badgeUrl: "https://example.test/badge.svg",
+    publicUrl: "https://example.test/acme/api",
+    generatedAt: new Date("2026-09-11T00:00:00Z"),
+    nightly: [],
+  };
+  const passingCheck = [
+    { id: "c1", results: [{ ranAt: new Date("2026-09-10T23:00:00Z"), pass: true }] },
+  ];
+
+  it("is not passing while an incident is open", () => {
+    // trust.json used to report status "passing" and incidents_open 1 in the same document,
+    // which leaves an agent deciding whether to depend on the service with no answer.
+    const trust = buildTrustJson({
+      ...base,
+      checks: passingCheck,
+      incidents: [{ openedAt: new Date("2026-09-10T22:00:00Z"), closedAt: null }],
+    } as never);
+    expect(trust.incidents_open).toBe(1);
+    expect(trust.status).toBe("degraded");
+  });
+
+  it("is passing once the incident closes", () => {
+    const trust = buildTrustJson({
+      ...base,
+      checks: passingCheck,
+      incidents: [
+        {
+          openedAt: new Date("2026-09-10T22:00:00Z"),
+          closedAt: new Date("2026-09-10T22:30:00Z"),
+        },
+      ],
+    } as never);
+    expect(trust.incidents_open).toBe(0);
+    expect(trust.status).toBe("passing");
+  });
+
+  it("still says failing when a check is failing now", () => {
+    // Failing is the worse news and has to win; an open incident must not soften it.
+    const trust = buildTrustJson({
+      ...base,
+      checks: [{ id: "c1", results: [{ ranAt: new Date("2026-09-10T23:00:00Z"), pass: false }] }],
+      incidents: [{ openedAt: new Date("2026-09-10T22:00:00Z"), closedAt: null }],
+    } as never);
+    expect(trust.status).toBe("failing");
+  });
+});

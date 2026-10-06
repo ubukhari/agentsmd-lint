@@ -327,15 +327,20 @@ export async function checkDeadPaths(ctx: RuleContext): Promise<Finding[]> {
       if (ref.rooted && !/\.[a-z0-9]+$/i.test(base)) continue; // `/api/health` is a route, not a path
 
       // A bare name with no directory ("every product ships an `llms.txt`") is
-      // usually a concept, not a path. Report it only when the repo really has
-      // one somewhere — then it is a reference that lost its directory. A
-      // trailing slash or a missing extension means a directory was meant, so
-      // `llms.txt` never matches a Next.js route folder of the same name.
+      // usually a concept, not a path. A trailing slash or a missing extension means a
+      // directory was meant, so `llms.txt` never matches a Next.js route folder of the
+      // same name.
+      //
+      // How many the repo has decides which it is. Exactly one, and the reference plausibly
+      // lost its directory — say so and give it. Several, and the name is a convention every
+      // one of them follows; there is no single path to point at, and demanding one would
+      // ask the author to pick a file at random. This repo's own CLAUDE.md says "every
+      // pricing page has a machine-readable `pricing.json`", which is true of six of them.
       let elsewhere: string[] = [];
       if (!ref.path.includes("/") && !ref.glob) {
         const wantDir = ref.raw.trim().endsWith("/") || !/\.[a-z0-9]+$/i.test(base);
         elsewhere = await sameNameElsewhere(ctx, base, wantDir);
-        if (elsewhere.length === 0) continue;
+        if (elsewhere.length !== 1) continue;
       }
       findings.push({
         rule: "dead-path",

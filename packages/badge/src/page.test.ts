@@ -200,6 +200,15 @@ describe("renderRunPage", () => {
     expect(html).toContain("source: agentcheck");
   });
 
+  it("marks the demo run page as sample data so it cannot be read as a measured run", () => {
+    expect(html).toContain('class="notice"');
+    expect(html).toContain("Sample data.");
+  });
+
+  it("omits the notice banner when there is nothing to disclaim", () => {
+    expect(renderRunPage({ ...data, notice: undefined })).not.toContain('class="notice"');
+  });
+
   it("orders the diff table regressed first", () => {
     const diffs: RunDiff[] = [
       { check: "u1", before: "a", after: "a", verdict: "unchanged" },

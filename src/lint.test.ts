@@ -221,3 +221,38 @@ describe("formats + badge", () => {
     expect(VERSION).toBe(pkg.version);
   });
 });
+
+describe("a bare filename the repo has many of", () => {
+  it("is a convention, not a dead path", async () => {
+    // "every pricing page has a machine-readable `pricing.json`" is true of six of them.
+    // There is no single path to point at, and demanding one asks the author to pick a file
+    // at random. This repo's own CLAUDE.md lost ten points to exactly that.
+    const report = await lint(
+      memoryReader({
+        "AGENTS.md":
+          "# Rules\n\nInstall with `pnpm install`. Test with `pnpm test`. Every product ships an `llms.txt`.\n",
+        "a/llms.txt": "",
+        "b/llms.txt": "",
+        "c/llms.txt": "",
+        "package.json": JSON.stringify({ scripts: { test: "vitest" } }),
+      }),
+      { now: NOW },
+    );
+    expect(report.findings.filter((f) => f.rule === "dead-path")).toEqual([]);
+  });
+
+  it("is still a lost directory when the repo has exactly one", async () => {
+    const report = await lint(
+      memoryReader({
+        "AGENTS.md":
+          "# Rules\n\nInstall with `pnpm install`. Test with `pnpm test`. See `llms.txt`.\n",
+        "docs/llms.txt": "",
+        "package.json": JSON.stringify({ scripts: { test: "vitest" } }),
+      }),
+      { now: NOW },
+    );
+    const dead = report.findings.filter((f) => f.rule === "dead-path");
+    expect(dead).toHaveLength(1);
+    expect(dead[0]?.fix).toContain("docs/llms.txt");
+  });
+});
