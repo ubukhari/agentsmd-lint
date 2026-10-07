@@ -4,7 +4,7 @@ import { ALL_RULES, type InstructionFile } from "./rules.js";
 import { scoreFindings } from "./score.js";
 import type { Finding, LintOptions, RepoReader, Report } from "./types.js";
 
-export const VERSION = "0.1.1";
+export const VERSION = "0.1.2";
 
 /** Instruction files looked for at the repo root (first found = "primary"). */
 export const DEFAULT_INSTRUCTION_FILES = [

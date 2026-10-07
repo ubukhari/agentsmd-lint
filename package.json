@@ -1,6 +1,6 @@
 {
   "name": "@agentwares/agentsmd-lint",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Lint AGENTS.md / CLAUDE.md / .cursorrules for stale commands, dead paths, contradictions and missing test or dev-env instructions. Emits an agent-readiness score and an SVG badge. No LLM, no telemetry, no account.",
   "license": "MIT",
   "type": "module",
